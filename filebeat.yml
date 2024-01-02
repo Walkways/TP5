@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: filebeat
+spec:
+  selector:
+    matchLabels:
+      app: filebeat
+  template:
+    metadata:
+      labels:
+        app: filebeat
+    spec:
+      containers:
+      - name: filebeat
+        image: docker.elastic.co/beats/filebeat:8.0.0
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "100m"
+          requests:
+            memory: "100Mi"
+            cpu: "50m"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/filebeat
+        - name: data
+          mountPath: /var/lib/filebeat/data
+      volumes:
+      - name: config
+        configMap:
+          name: filebeat-config
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: filebeat-config
+data:
+  filebeat.yml: |-
+    filebeat.inputs:
+    - type: log
+      enabled: true
+      paths:
+        - /var/log/*.log
+      fields_under_root: true
+      fields:
+        type: kubernetes
+
+    output.logstash:
+      hosts: ["logstash:5044"]
